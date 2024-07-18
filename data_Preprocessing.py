@@ -1,53 +1,44 @@
-import os
 import pandas as pd
-import re
+from datetime import datetime
+import os
 
-def get_frequency_from_filename(filename):
-    match = re.search(r'(\d+)', filename)
-    if match:
-        return f'{match.group(1)}min'
-    return '5min'  # 默认值
-
-def convert_and_fill_data(input_folder, output_folder):
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
+def process_csv(file_path):
+    # 读取CSV文件
+    df = pd.read_csv(file_path)
     
-    for filename in os.listdir(input_folder):
-        if filename.endswith('.csv'):
-            file_path = os.path.join(input_folder, filename)
-            try:
-                freq = get_frequency_from_filename(filename)
-                
-                # 读取CSV文件
-                df = pd.read_csv(file_path)
-                
-                # 将时间列转换为datetime对象
-                df['time'] = pd.to_datetime(df['time'], unit='s')
-                
-                # 设置时间列为索引
-                df.set_index('time', inplace=True)
-                
-                # 对数据进行重采样，使用指定的频率
-                df = df.resample(freq).agg({
-                    'open': 'first',
-                    'high': 'max',
-                    'low': 'min',
-                    'close': 'last'
-                }).dropna(how='all')  # 删除全为NaN的行
-                
-                # 重置索引，将时间列重新作为普通列
-                df.reset_index(inplace=True)
-                
-                # 保存处理后的数据到输出文件夹
-                output_file_path = os.path.join(output_folder, filename)
-                df.to_csv(output_file_path, index=False, date_format='%Y/%m/%d %H:%M')
-                
-                print(f'成功处理 {filename}，数据清洗成功')
-            
-            except Exception as e:
-                print(f'{filename} 数据清洗遇到问题: {e}')
+    # 转换时间戳
+    df['datetime'] = pd.to_datetime(df['time'], unit='s')
+    df = df.set_index('datetime')
+    
+    # 只保留所需的列
+    columns_to_keep = ['open', 'high', 'low', 'close']
+    df = df[columns_to_keep]
+    
+    # 处理缺失值：使用前向填充，这通常适合时间序列数据
+    df = df.fillna(method='ffill')
+    
+    # 如果仍有缺失值，使用后向填充
+    df = df.fillna(method='bfill')
+    
+    # 按时间排序
+    df = df.sort_index()
+    
+    # 生成输出文件名
+    output_file = file_path.replace('.csv', '_processed.csv')
+    
+    # 保存处理后的数据
+    df.to_csv(output_file)
+    
+    print(f"Processed {file_path} and saved to {output_file}")
 
-# 使用示例
-input_folder = 'original'
-output_folder = 'data'
-convert_and_fill_data(input_folder, output_folder)
+def main():
+    file_names = ['BATS_QQQ, 5.csv', 'BATS_QQQ, 15.csv', 'BATS_QQQ, 60.csv', 'BATS_QQQ, 240.csv']
+    
+    for file_name in file_names:
+        if os.path.exists(file_name):
+            process_csv(file_name)
+        else:
+            print(f"File not found: {file_name}")
+
+if __name__ == "__main__":
+    main()
