@@ -83,19 +83,15 @@ class VADSizer(bt.Sizer):
 
 def run_strategy(symbol, interval):
     cerebro = bt.Cerebro()
-
     try:
         filename = f'BATS_QQQ, {interval.replace("min", "")}_processed.csv'
         df = pd.read_csv(filename, parse_dates=['datetime'], index_col='datetime')
-        
-        # 设置固定的开始和结束日期
+
         start_date = df.index.min()
         end_date = df.index.max()
-        
+
         data = bt.feeds.PandasData(dataname=df, fromdate=start_date, todate=end_date)
-
         cerebro.adddata(data)
-
         cerebro.addstrategy(VADStrategy)
         cerebro.addsizer(VADSizer)
 
@@ -245,14 +241,15 @@ def update_chart(symbol, interval, timeframe):
 
         # 在主图上添加买卖点标记
         fig.add_trace(go.Scatter(
-            x=buy_points, y=[df.loc[date, 'low'] if date in df.index else None for date in buy_points],
+            x=buy_points, y=[df.loc[date, 'low'] for date in buy_points if date in df.index],
             mode='markers', name='Buy', marker=dict(symbol='triangle-up', size=8, color='green')
         ), row=1, col=1)
 
         fig.add_trace(go.Scatter(
-            x=sell_points, y=[df.loc[date, 'high'] if date in df.index else None for date in sell_points],
+            x=sell_points, y=[df.loc[date, 'high'] for date in sell_points if date in df.index],
             mode='markers', name='Sell', marker=dict(symbol='triangle-down', size=8, color='red')
         ), row=1, col=1)
+
 
         # 在子图上显示交易活动
         trade_activity = pd.Series(1, index=buy_points).append(pd.Series(-1, index=sell_points)).sort_index()
@@ -268,8 +265,13 @@ def update_chart(symbol, interval, timeframe):
             yaxis_title="Price",
             xaxis_rangeslider_visible=False,
             height=800,  # 增加图表高度以容纳子图
-            hovermode="x unified"
+            hovermode="x unified",
+            uirevision='constant'  # 确保缩放和拖动状态不会被重置
         )
+
+        # 设置坐标轴的滚轮缩放
+        fig.update_xaxes(fixedrange=False)
+        fig.update_yaxes(fixedrange=False)
 
         # 添加范围选择器
         fig.update_xaxes(
