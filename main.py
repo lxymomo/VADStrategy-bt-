@@ -13,8 +13,12 @@ if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
 def get_csv_date_range(data_file):
-    df = pd.read_csv(data_file, parse_dates=['time'], date_format='%Y/%m/%d %H:%M')
-    return df.iloc[0, 0].date(), df.iloc[-1, 0].date()
+    df = pd.read_csv(data_file)
+    if 'time' in df.columns:
+        df['time'] = pd.to_datetime(df['time'])
+        return df['time'].min().date(), df['time'].max().date()
+    else:
+        raise ValueError("CSV file does not contain 'time' column")
 
 def add_data_and_run_strategy(strategy_class, data_file, name):
     cerebro = bt.Cerebro()
@@ -31,16 +35,16 @@ def add_data_and_run_strategy(strategy_class, data_file, name):
 
     data = bt.feeds.GenericCSVData(
         dataname=data_file,
-        dtformat='%Y/%m/%d %H:%M',
-        timeframe=bt.TimeFrame.Minutes, 
+        dtformat='%Y-%m-%d %H:%M:%S',
+        timeframe=bt.TimeFrame.Minutes,
         datetime=0,
         open=1,
         high=2,
         low=3,
         close=4,
-        volume=-1,
+        volume=5,
         openinterest=-1,
-        time=-1,  # 指定时间列为 -1
+        atr=6,  # 添加 ATR 列
         separator=',',
     )
     

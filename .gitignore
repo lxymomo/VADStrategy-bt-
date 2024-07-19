@@ -1,5 +1,9 @@
 original/
-vadresults.py
-test.py
 data/
 results/
+BATS_QQQ, 5.csv
+BATS_QQQ, 240.csv
+VADstrategy.py
+plotly_example.py
+vadresults.py
+test.py

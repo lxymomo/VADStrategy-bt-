@@ -1,33 +1,52 @@
 import pandas as pd
-from datetime import datetime
 import os
 
 def process_csv(file_path):
+    # 从文件名中提取周期
+    period = int(file_path.split(',')[-1].split('.')[0].strip())
+    
     # 读取CSV文件
     df = pd.read_csv(file_path)
     
-    # 转换时间戳
-    df['datetime'] = pd.to_datetime(df['time'], unit='s')
-    df = df.set_index('datetime')
+    # 检查 'time' 列是否存在，如果不存在，尝试使用第一列作为时间列
+    if 'time' not in df.columns:
+        df['time'] = df.iloc[:, 0]
+    
+    # 将 'time' 列转换为 datetime 对象
+    df['time'] = pd.to_datetime(df['time'], unit='s')
+    df = df.set_index('time')
     
     # 只保留所需的列
-    columns_to_keep = ['open', 'high', 'low', 'close']
+    columns_to_keep = ['open', 'high', 'low', 'close', 'Volume', 'ATR']
     df = df[columns_to_keep]
     
-    # 处理缺失值：使用前向填充，这通常适合时间序列数据
-    df = df.fillna(method='ffill')
+    # 根据周期进行重采样和填充
+    df = df.resample(f'{period}min').agg({
+        'open': 'first',
+        'high': 'max',
+        'low': 'min',
+        'close': 'last',
+        'Volume': 'sum',
+        'ATR': 'last'
+    })
+    
+    # 使用前向填充处理缺失值
+    df = df.ffill()
     
     # 如果仍有缺失值，使用后向填充
-    df = df.fillna(method='bfill')
+    df = df.bfill()
     
-    # 按时间排序
-    df = df.sort_index()
+    # 重置索引，使 time 成为一个普通列
+    df = df.reset_index()
     
     # 生成输出文件名
-    output_file = file_path.replace('.csv', '_processed.csv')
+    output_file = os.path.join('data', os.path.basename(file_path))
+    
+    # 确保 data 文件夹存在
+    os.makedirs('data', exist_ok=True)
     
     # 保存处理后的数据
-    df.to_csv(output_file)
+    df.to_csv(output_file, index=False)
     
     print(f"Processed {file_path} and saved to {output_file}")
 
