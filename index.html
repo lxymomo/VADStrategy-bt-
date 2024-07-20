@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Chart</title>
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body>
+    <div id="chart"></div>
+    <script>
+        const chart = LightweightCharts.createChart(document.getElementById('chart'), {
+            width: 1000,
+            height: 600,
+            layout: {
+                backgroundColor: '#ffffff',
+                textColor: 'rgba(33, 56, 77, 1)',
+            },
+            grid: {
+                vertLines: {
+                    color: 'rgba(197, 203, 206, 0.5)',
+                },
+                horzLines: {
+                    color: 'rgba(197, 203, 206, 0.5)',
+                },
+            },
+            crosshair: {
+                mode: LightweightCharts.CrosshairMode.Normal,
+            },
+            rightPriceScale: {
+                borderColor: 'rgba(197, 203, 206, 1)',
+            },
+            timeScale: {
+                borderColor: 'rgba(197, 203, 206, 1)',
+            },
+        });
+
+        const candleSeries = chart.addCandlestickSeries({
+            upColor: '#26a69a',
+            downColor: '#ef5350',
+            borderVisible: false,
+            wickUpColor: '#26a69a',
+            wickDownColor: '#ef5350',
+        });
+
+        const vwmaSeries = chart.addLineSeries({
+            color: 'rgba(75, 0, 130, 1)',
+            lineWidth: 2,
+        });
+
+        fetch('/data')
+            .then(response => response.json())
+            .then(data => {
+                const candleData = data.map(d => ({
+                    time: d.time,
+                    open: d.open,
+                    high: d.high,
+                    low: d.low,
+                    close: d.close
+                }));
+                
+                const vwmaData = data.map(d => ({
+                    time: d.time,
+                    value: d.VWMA
+                }));
+
+                candleSeries.setData(candleData);
+                vwmaSeries.setData(vwmaData);
+            });
+    </script>
+</body>
+</html>
