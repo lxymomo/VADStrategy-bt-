@@ -1,5 +1,0 @@
-backtrader==1.9.78.123
-matplotlib==3.9.1
-pandas==2.2.2
-plotly==5.22.0
-texttable==1.7.0
